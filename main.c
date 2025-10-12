@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <time.h>
 
 #include "prot.h"
 #include "conn.h"
@@ -31,21 +32,26 @@ int main(int argc, char* argv[]){
   }
 
   socklen_t size_of_peer = sizeof(ci.peer_addr);
-  int peer_socket = accept(ci.sockfd, (struct sockaddr *)&ci.my_addr, &size_of_peer);
+  while(1){
+    int peer_socket = accept(ci.sockfd, (struct sockaddr *)&ci.my_addr, &size_of_peer);
 
-  if(peer_socket == -1){
-    perror("accept error");
-    return 1;
+    if(peer_socket == -1){
+      perror("accept error");
+      return 1;
+    }
+
+    http_response res = {0};
+    res.code = 200;
+    res.content_type = "text/html";
+
+    memset(in_buf, 0, 1023);
+    ssize_t in_val = read(peer_socket, in_buf, 1023);
+    printf("%s\n", in_buf);
+    memset(in_buf, 0, 1023);
+    sprintf(in_buf, "%lu", (unsigned long)time(NULL));
+    printf("%s\n", in_buf);
+    send(peer_socket, in_buf, strlen(in_buf), 0);
   }
 
-  http_response res = {0};
-  res.code = 200;
-  res.content_type = "text/html";
-
-  ssize_t in_val = read(peer_socket, in_buf, 1023);
-  printf("%s\n", in_buf);
-  format_http_response(&res, in_buf, 1024);
-  printf("%s\n", in_buf);
-  send(peer_socket, in_buf, strlen(in_buf), 0);
 
 }
