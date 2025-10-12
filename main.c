@@ -12,6 +12,9 @@
 #include "prot.h"
 #include "conn.h"
 
+#define SECONDS_PER_HOUR 3600
+#define HK_OFFSET 28800 //8 hours
+
 void format_http_response(http_response *res, char* str, size_t limit){
   char* res_str = "\
 HTTP/2 404\r\n\
@@ -48,7 +51,8 @@ int main(int argc, char* argv[]){
     ssize_t in_val = read(peer_socket, in_buf, 1023);
     printf("%s\n", in_buf);
     memset(in_buf, 0, 1023);
-    sprintf(in_buf, "%lu", (unsigned long)time(NULL));
+    unsigned long time_now = time(NULL);
+    sprintf(in_buf, "%lu", time_now+HK_OFFSET);
     printf("%s\n", in_buf);
     send(peer_socket, in_buf, strlen(in_buf), 0);
   }
