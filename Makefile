@@ -1,3 +1,5 @@
+FLAGS := -Wall -Wextra
+LIBS := -lcrypto -lssl
 
 server:conn.c main.c
-	gcc -Wall -Wextra conn.c main.c -o server -lcrypto -lssl
+	gcc ${FLAGS} ${LIBS} main.c conn.c -o server 
