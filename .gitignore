@@ -1,2 +1,5 @@
 a.out
 **~
+server
+api_secret.h
+http_req.c
