@@ -23,10 +23,22 @@ void parse_kv(char* test){
 
 void json_parse(){
   const char *str = "{\"symbol\":\"TEM\",\"name\":\"Tempus AI, Inc.\",\"exchange\":\"NASDAQ\",\"mic_code\":\"XNGS\",\"currency\":\"USD\",\"datetime\":\"2025-10-14\",\"timestamp\":1760448600,\"last_quote_at\":1760448600,\"open\":\"92.11000\",\"high\":\"93.90600\",\"low\":\"87.30000\",\"close\":\"89.87000\",\"volume\":\"6952000\",\"previous_close\":\"94.47000\",\"change\":\"-4.60000\",\"percent_change\":\"-4.86927\",\"average_volume\":\"8553950\",\"is_market_open\":false,\"fifty_two_week\":{\"low\":\"31.36000\",\"high\":\"104.32000\",\"low_change\":\"58.51000\",\"high_change\":\"-14.45000\",\"low_change_percent\":\"186.57526\",\"high_change_percent\":\"-13.85161\",\"range\":\"31.360001 - 104.320000\"}}";
+  char *str_set = malloc((strlen(str)+1)*sizeof(char));
+  strcpy(str_set, str);
 
-
-  char test[] = "\"symbol\":\"TEM\"";
-  parse_kv(test);
+  int in_string = 0;
+  size_t start = 1;
+  size_t str_len_set = strlen(str_set);
+  for(size_t i = 0; i < str_len_set; i++){
+    if(str_set[i] == '"')
+      in_string = (in_string+1)%2;
+    if(str_set[i] == ',' && in_string == 0){
+      str_set[i] = 0;
+      printf("%s\n", &str_set[start]);
+      start = i+1;
+    }
+  }
+  printf("%s\n", &str_set[start]);
 }
 
 
