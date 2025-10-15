@@ -11,6 +11,7 @@
 
 #include "prot.h"
 #include "conn.h"
+#include "parse.h"
 
 #define PORT 8080
 #define SECONDS_PER_HOUR 3600
@@ -18,13 +19,19 @@
 
 
 int main(){
+  http_response res = {0};
   connection_info ci;
-  char in_buf[1024];
-
-  //request_stock_data();
-  //temp disable to not run out of api credits
-
-
+  char in_buf[1024]; //buffer for inbound connections
+  char response_buff[2048]; //response from outbound connection
+  
+  request_stock_data(response_buff, 2048);
+  parse_http_response(&res, response_buff);
+  
+  printf("response-code: %d\n", res.response_code);
+  printf("content-length: %d\n", res.content_length);
+  printf("body: %s\n", res.body);
+  free(res.body);
+  
   if(open_connection(PORT, &ci) != 0){
     return 1;
   }

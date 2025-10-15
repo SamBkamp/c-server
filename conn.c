@@ -64,7 +64,11 @@ int init_socket(){
   return out_socketfd;
 }
 
-int request_stock_data(void) {
+int request_stock_data(char* response_str, size_t str_size) {
+  int bytes_recieved;
+  int total_bytes_read = 0;
+  char buffer[1024]; //response data buffer
+  char request[512]; //request data buffer
   SSL_CTX *ctx;
   SSL *ssl;
 
@@ -90,18 +94,18 @@ int request_stock_data(void) {
     return 1;
   }
 
-  char request[512];
   const char* end_point = "quote";
   const char* ticker = "TEM";  
   snprintf(request, 512, "GET /%s?symbol=%s&apikey=%s HTTP/1.1\r\nHost: api.twelvedata.com\r\nConnection: close\r\n\r\n", end_point, ticker, API_SECRET);
 
   SSL_write(ssl, request, strlen(request));
   
-  int bytes_received;
-  char buffer[1024];
-  while ((bytes_received = SSL_read(ssl, buffer, 1023)) > 0) {
-    buffer[bytes_received] = '\0';
-    printf("%s", buffer);
+  while ((bytes_recieved = SSL_read(ssl, buffer, 1023)) > 0) {
+    buffer[bytes_recieved] = '\0';
+    if(total_bytes_read+bytes_recieved < (int)str_size)
+      strcat(response_str, buffer);
+    else
+      break;
   }
   SSL_shutdown(ssl);
   SSL_free(ssl);

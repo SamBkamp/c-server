@@ -1,6 +1,9 @@
 #ifndef SERVER_PROT
 #define SERVER_PROT
 
+#include <stdint.h>
+#include <netinet/in.h>
+
 typedef struct{
   int sockfd;
   struct sockaddr_in my_addr;
@@ -13,8 +16,9 @@ typedef struct{
 }http_connection;
 
 typedef struct{
-  uint16_t code;
-  char* content_type;
+  int response_code;
+  int content_length;
+  char* body;
 }http_response;
 
 #endif
