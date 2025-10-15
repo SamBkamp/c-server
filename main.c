@@ -24,7 +24,7 @@ int main(){
   //request_stock_data();
   //temp disable to not run out of api credits
 
-  
+
   if(open_connection(PORT, &ci) != 0){
     return 1;
   }
