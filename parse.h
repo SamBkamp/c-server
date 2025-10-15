@@ -2,5 +2,6 @@
 #define PARSE
 
 int parse_http_response(http_response *res, char* data);
+void json_parse();
 
 #endif
