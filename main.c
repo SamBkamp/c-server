@@ -23,15 +23,13 @@ int main(){
   connection_info ci;
   char in_buf[1024]; //buffer for inbound connections
   char response_buff[2048]; //response from outbound connection
-  
+  kv_pair pairs[20];
+
   request_stock_data(response_buff, 2048);
   parse_http_response(&res, response_buff);
-  
-  printf("response-code: %d\n", res.response_code);
-  printf("content-length: %d\n", res.content_length);
-  printf("body: %s\n", res.body);
+  json_parse(res.body, pairs);
   free(res.body);
-  
+
   if(open_connection(PORT, &ci) != 0){
     return 1;
   }
