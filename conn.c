@@ -23,7 +23,7 @@ SSL_CTX *init_ssl_context(){
   SSL_library_init();
   SSL_load_error_strings();
   OpenSSL_add_all_algorithms();
-  
+
   SSL_CTX *ctx = SSL_CTX_new(TLS_client_method());
   if (!ctx) {
     ERR_print_errors_fp(stderr);
@@ -40,7 +40,7 @@ int init_socket(){
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
-  
+
   int gai = getaddrinfo(HOST, "443", &hints, &res);
   if(gai != 0){
     printf("%s\n", gai_strerror(gai));
@@ -48,7 +48,7 @@ int init_socket(){
   }
 
   int out_socketfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-  
+
   if(out_socketfd == -1){
     perror("socket error");
     freeaddrinfo(res);
@@ -75,7 +75,7 @@ int request_stock_data(char* response_str, size_t str_size) {
   ctx = init_ssl_context();
   if(ctx == (SSL_CTX *)-1)
     return 1;
-  
+
   int out_sockfd = init_socket();
   if(out_sockfd < 0)
     return 1;
@@ -84,7 +84,7 @@ int request_stock_data(char* response_str, size_t str_size) {
   ssl = SSL_new(ctx);
   SSL_set_fd(ssl, out_sockfd);
   SSL_set_tlsext_host_name(ssl, HOST); //have to set hostname for servers with multiple hosts, so you get the correct SSL Certs
-  
+
   if (SSL_connect(ssl) <= 0) {
     printf("SSL connect: ");
     ERR_print_errors_fp(stderr);
@@ -95,15 +95,17 @@ int request_stock_data(char* response_str, size_t str_size) {
   }
 
   const char* end_point = "quote";
-  const char* ticker = "TEM";  
+  const char* ticker = "TEM";
   snprintf(request, 512, "GET /%s?symbol=%s&apikey=%s HTTP/1.1\r\nHost: api.twelvedata.com\r\nConnection: close\r\n\r\n", end_point, ticker, API_SECRET);
 
   SSL_write(ssl, request, strlen(request));
-  
+
   while ((bytes_recieved = SSL_read(ssl, buffer, 1023)) > 0) {
     buffer[bytes_recieved] = '\0';
-    if(total_bytes_read+bytes_recieved < (int)str_size)
+    if(total_bytes_read+bytes_recieved < (int)str_size){
       strcat(response_str, buffer);
+      total_bytes_read+=bytes_recieved;
+    }
     else
       break;
   }
