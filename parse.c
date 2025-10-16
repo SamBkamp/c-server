@@ -5,11 +5,6 @@
 #include "prot.h"
 #include "parse.h"
 
-typedef struct{
-  char key[20];
-  char value[20];
-}kv_pair;
-
 int in_string = 0; //keeps track if we are in a string 0 = false
 int sub_obj = 0; //keeps track if were inbetween {}
 size_t start = 0;
@@ -18,13 +13,12 @@ char* working_s;
 //functions like strtok but doesnt split when the delim is in a string or between {}
 char* custom_strtok(char* s, char delim){
   int ret_idx = 0;
-  if(s != NULL){
+  if(s != NULL){ //init our strtok
     s_len = strlen(s);
     start = 0;
     working_s = s;
   }
-
-  if(start == s_len)
+  if(start == s_len) //reached the end of our string already
     return NULL;
   for(size_t i = start; i < s_len; i++){
     switch(working_s[i]){
@@ -48,24 +42,23 @@ char* custom_strtok(char* s, char delim){
   }
   //only reaches here if at the end of string
   ret_idx = start;
-  start = s_len;
+  start = s_len; //next call will NULL
   return &working_s[ret_idx];
 }
 
-void json_parse(){
-  const char *str = "{\"symbol\":\"TEM\",\"name\":\"Tempus AI, Inc.\",\"exchange\":\"NASDAQ\",\"mic_code\":\"XNGS\",\"currency\":\"USD\",\"datetime\":\"2025-10-14\",\"timestamp\":1760448600,\"last_quote_at\":1760448600,\"open\":\"92.11000\",\"high\":\"93.90600\",\"low\":\"87.30000\",\"close\":\"89.87000\",\"volume\":\"6952000\",\"previous_close\":\"94.47000\",\"change\":\"-4.60000\",\"percent_change\":\"-4.86927\",\"average_volume\":\"8553950\",\"is_market_open\":false,\"fifty_two_week\":{\"low\":\"31.36000\",\"high\":\"104.32000\",\"low_change\":\"58.51000\",\"high_change\":\"-14.45000\",\"low_change_percent\":\"186.57526\",\"high_change_percent\":\"-13.85161\",\"range\":\"31.360001 - 104.320000\"}}";
-  char *str_set = malloc((strlen(str)+1)*sizeof(char));
-  strcpy(str_set, str);
-
-
-  size_t str_len_set = strlen(str_set);
-  str_set[--str_len_set] = 0;//strip trailing } (TODO: check if last char is actually closing brace)
-  str_set++; //strip leading { (TODO: check todo above)
-  //works like a custom strtok that ignores delim if certain conditions are met
-  // in this case if the delim is in a string
-  char* token = custom_strtok(str_set, ',');
-  while(token != NULL){
-    printf("token: %s\n", token);
+void json_parse(char* in_string, kv_pair* pairs){
+  in_string[strlen(in_string)-1] = 0;//strip trailing }
+  in_string++; //strip leading {
+  char* token = custom_strtok(in_string, ',');
+  while(token != NULL){ 
+    size_t delim = 0;
+    while(token[delim] != ':' && token[delim] != 0) //find : character to split key and value
+      delim++;
+    token[delim] = 0; //null terminator to split the strings
+    
+    strncpy(pairs->key, token, VAL_MAX);
+    strncpy(pairs->value, &token[delim+1], VAL_MAX);
+    pairs++; //OOB RISK, im not managing memory for u
     token = custom_strtok(NULL, ',');
   }
 }
@@ -77,7 +70,8 @@ int parse_http_response(http_response *res, char* data){
 
   while(token != NULL){
     //check for http code
-    if(strncmp(token, "HTTP", 4)==0){
+    //some APIS return 0x1c (FS) at the start of their http response
+    if(strncmp(token, "HTTP", 4)==0 || strncmp(token+1, "HTTP", 4)==0){
       char code[5];
       for(int i = 0; i < 4; i++)
 	code[i] = token[9+i];
