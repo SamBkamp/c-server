@@ -10,15 +10,46 @@ typedef struct{
   char value[20];
 }kv_pair;
 
-void parse_kv(char* test){
-  kv_pair pair = {0};
-  char* token = strtok(test, ":");
-  if(token != NULL)
-    strncpy(pair.key, token, 20);
-  token = strtok(NULL, ":");
-  if(token != NULL)
-    strncpy(pair.value, token, 20);
-  printf("key: %s\nvalue: %s\n", pair.key, pair.value);
+int in_string = 0; //keeps track if we are in a string 0 = false
+int sub_obj = 0; //keeps track if were inbetween {}
+size_t start = 0;
+size_t s_len = 0;
+char* working_s;
+//functions like strtok but doesnt split when the delim is in a string or between {}
+char* custom_strtok(char* s, char delim){
+  int ret_idx = 0;
+  if(s != NULL){
+    s_len = strlen(s);
+    start = 0;
+    working_s = s;
+  }
+
+  if(start == s_len)
+    return NULL;
+  for(size_t i = start; i < s_len; i++){
+    switch(working_s[i]){
+    case '"':
+      in_string = (in_string+1)%2;
+      break;
+    case '{':
+      sub_obj++;
+      break;
+    case '}':
+      sub_obj--;
+      break;
+    }
+    if((working_s[i]==delim) //check for delim
+       && in_string == 0 && sub_obj == 0){ //and not in string or obj
+      working_s[i] = 0;
+      ret_idx = start;
+      start = i+1;
+      return &working_s[ret_idx];
+    }
+  }
+  //only reaches here if at the end of string
+  ret_idx = start;
+  start = s_len;
+  return &working_s[ret_idx];
 }
 
 void json_parse(){
@@ -26,19 +57,17 @@ void json_parse(){
   char *str_set = malloc((strlen(str)+1)*sizeof(char));
   strcpy(str_set, str);
 
-  int in_string = 0;
-  size_t start = 1;
+
   size_t str_len_set = strlen(str_set);
-  for(size_t i = 0; i < str_len_set; i++){
-    if(str_set[i] == '"')
-      in_string = (in_string+1)%2;
-    if(str_set[i] == ',' && in_string == 0){
-      str_set[i] = 0;
-      printf("%s\n", &str_set[start]);
-      start = i+1;
-    }
+  str_set[--str_len_set] = 0;//strip trailing } (TODO: check if last char is actually closing brace)
+  str_set++; //strip leading { (TODO: check todo above)
+  //works like a custom strtok that ignores delim if certain conditions are met
+  // in this case if the delim is in a string
+  char* token = custom_strtok(str_set, ',');
+  while(token != NULL){
+    printf("token: %s\n", token);
+    token = custom_strtok(NULL, ',');
   }
-  printf("%s\n", &str_set[start]);
 }
 
 
