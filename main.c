@@ -43,21 +43,22 @@ char* long_to_ip(char* out, unsigned long IP){
 }
 
 //handler function for quote requests, manages cache and sends new requests as needed
-void quote_request(kv_pair *pairs){
+void quote_request(kv_pair *pairs, size_t symbol){
   unsigned long time_now = time(NULL);
-  if(time_now <=  cache.timestamp + CACHE_TTL){
-    printf("using cached data\n");
-    pairs = cache.data;
+  if(time_now <=  cache->timestamp + CACHE_TTL){
+    printf("using cached data for %s\n", cache[symbol].symbol);
+    pairs = cache->data;
     return;
   }
-  printf("cache expired, making new request\n");
+  printf("cache for %s expired, making new request\n", cache[symbol].symbol);
   char response_buff[2048]; //response from outbound connection
   http_response res = {0};
-  request_stock_data(response_buff, 2048);
+  request_stock_data(response_buff, 2048,
+		     cache[symbol].endpoint, cache[symbol].symbol);
   parse_http_response(&res, response_buff);
   json_parse(res.body, pairs);
-  cache.data = pairs;
-  cache.timestamp = time_now;
+  cache[0].data = pairs;
+  cache[0].timestamp = time_now;
   free(res.body);
 }
 
