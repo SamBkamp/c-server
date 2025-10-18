@@ -19,6 +19,16 @@
 
 quote_cache cache;
 
+//formats a number from json to 2 sig. fig. (eg "604.83990" -> "604.83) (no rounding, yet)
+void format_2sf(char* in){
+  size_t decimal_index = 0;
+  while(in[decimal_index] != '.' && in[decimal_index] != 0){
+    decimal_index++;
+  }
+  if(strlen(in) >= decimal_index+3)
+    in[decimal_index+3] = 0;
+}
+
 void quote_request(kv_pair *pairs){
   unsigned long time_now = time(NULL);
   if(time_now <=  cache.timestamp + CACHE_TTL){
@@ -64,7 +74,9 @@ int main(){
 
     if(strncmp(in_buf, "qqq", 3) == 0){
       quote_request(pairs);
-      sprintf(in_buf, "%s", pairs[0].value);
+      format_2sf(pairs[13].value);
+      sprintf(in_buf, "%s", pairs[13].value);
+      printf("requested %s", pairs[13].key);
       fflush(stdout);
     }else{
       unsigned long time_now = time(NULL);
