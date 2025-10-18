@@ -19,7 +19,7 @@
 
 quote_cache cache;
 
-//formats a number from json to 2 sig. fig. (eg "604.83990" -> "604.83) (no rounding, yet)
+//formats a number from json to 2 sig. fig. (eg 604.83990 -> 604.83) (no rounding, yet)
 void format_2sf(char* in){
   size_t decimal_index = 0;
   while(in[decimal_index] != '.' && in[decimal_index] != 0){

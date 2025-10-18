@@ -5,6 +5,14 @@
 #include "prot.h"
 #include "parse.h"
 
+char* strip_quotes(char* str){
+  if(str[0] != '"')
+    return str;
+  str[strlen(str)-1] = 0;
+  return str+1;
+}
+
+
 int in_string = 0; //keeps track if we are in a string 0 = false
 int sub_obj = 0; //keeps track if were inbetween {}
 size_t start = 0;
@@ -49,15 +57,18 @@ char* custom_strtok(char* s, char delim){
 void json_parse(char* in_string, kv_pair* pairs){
   in_string[strlen(in_string)-1] = 0;//strip trailing }
   in_string++; //strip leading {
+
   char* token = custom_strtok(in_string, ',');
-  while(token != NULL){ 
-    size_t delim = 0;
-    while(token[delim] != ':' && token[delim] != 0) //find : character to split key and value
-      delim++;
-    token[delim] = 0; //null terminator to split the strings
-    
-    strncpy(pairs->key, token, VAL_MAX);
-    strncpy(pairs->value, &token[delim+1], VAL_MAX);
+  while(token != NULL){
+    char* value = token;
+    while(*value != ':' && *value != 0)
+      value++;
+
+    *value = 0; //null terminator to split the strings
+    value++; //advance past split, points at substr
+
+    strncpy(pairs->key, strip_quotes(token), VAL_MAX);
+    strncpy(pairs->value, strip_quotes(value), VAL_MAX);
     pairs++; //OOB RISK, im not managing memory for u
     token = custom_strtok(NULL, ',');
   }
