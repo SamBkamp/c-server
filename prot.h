@@ -4,6 +4,21 @@
 #include <stdint.h>
 #include <netinet/in.h>
 
+
+#ifndef VAL_MAX
+#define VAL_MAX 256
+#endif //VAL_MAX
+
+typedef struct{
+  char key[VAL_MAX];
+  char value[VAL_MAX];
+}kv_pair;
+
+typedef struct{
+  unsigned long timestamp;
+  kv_pair *data;
+}quote_cache;
+
 typedef struct{
   int sockfd;
   struct sockaddr_in my_addr;
