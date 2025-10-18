@@ -95,8 +95,9 @@ int request_stock_data(char* response_str, size_t str_size) {
   }
 
   const char* end_point = "quote";
-  const char* ticker = "TEM";
-  snprintf(request, 512, "GET /%s?symbol=%s&apikey=%s HTTP/1.1\r\nHost: api.twelvedata.com\r\nConnection: close\r\n\r\n", end_point, ticker, API_SECRET);
+  const char* ticker = "QQQ";
+  const char* interval = "30min";
+  snprintf(request, 512, "GET /%s?symbol=%s&interval=%s&apikey=%s HTTP/1.1\r\nHost: api.twelvedata.com\r\nConnection: close\r\n\r\n", end_point, ticker, interval, API_SECRET);
 
   SSL_write(ssl, request, strlen(request));
 
@@ -116,15 +117,15 @@ int request_stock_data(char* response_str, size_t str_size) {
   return 0;
 }
 
-
-
-
 int open_connection(uint16_t PORT, connection_info *ret){
   ret->sockfd = socket(AF_INET, SOCK_STREAM, 0); //open a socket
   if(ret->sockfd == -1){
     perror("socket error");
     return -1;
   }
+
+  if(setsockopt(ret->sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) != 0)
+    perror("[NON-FATAL] couldn't set sockopt\n");
 
   memset(&ret->my_addr, 0, sizeof(ret->my_addr)); //reset our socket address structs
   ret->my_addr.sin_family = AF_INET; //were using IP
