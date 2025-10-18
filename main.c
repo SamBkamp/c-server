@@ -38,7 +38,8 @@ int main(){
 
   socklen_t size_of_peer = sizeof(ci.peer_addr);
   while(1){
-    int peer_socket = accept(ci.sockfd, (struct sockaddr *)&ci.my_addr, &size_of_peer);
+    int peer_socket = accept(ci.sockfd, (struct sockaddr *)&ci.peer_addr, &size_of_peer);
+    printf("new connection from %x\n", ntohl(ci.peer_addr.sin_addr.s_addr));
 
     if(peer_socket == -1){
       perror("accept error");
