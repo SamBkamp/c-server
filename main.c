@@ -33,9 +33,9 @@ char* long_to_ip(char* out, unsigned long IP){
   memset(out, 0, 16); //16 bytes max for an IP string (with nullptr)
   size_t out_idx = 0;
   for(size_t i = 0; i < 3; i++){
-    out_idx += sprintf(&out[out_idx], "%d.", ((char*)&IP)[i]);
+    out_idx += sprintf(&out[out_idx], "%d.", ((unsigned char*)&IP)[i]);
   }
-  out_idx += sprintf(&out[out_idx], "%d", ((char*)&IP)[3]); //last digit has no trailing .
+  out_idx += sprintf(&out[out_idx], "%d", ((unsigned char*)&IP)[3]); //last digit has no trailing .
   return out;
 }
 
@@ -87,8 +87,8 @@ int main(){
     if(strncmp(in_buf, "qqq", 3) == 0){
       quote_request(pairs);
       format_2sf(pairs[13].value);
-      sprintf(in_buf, "%s", pairs[13].value);
-      printf("requested %s", pairs[13].key);
+      format_2sf(pairs[14].value);
+      sprintf(in_buf, "%s %s", pairs[13].value, pairs[14].value);
       fflush(stdout);
     }else{
       unsigned long time_now = time(NULL);
