@@ -17,7 +17,10 @@
 #define PORT 8080
 #define HK_OFFSET 28800 //8 hours in seconds
 
-quote_cache cache;
+#define CACHE_QQQ 0
+#define CACHE_XAU 1
+
+quote_cache cache[2];
 
 //formats a number from json to 2 sig. fig. (eg 604.83990 -> 604.83) (no rounding, yet)
 void format_2sf(char* in){
@@ -64,7 +67,12 @@ int main(){
   char in_buf[1024]; //buffer for inbound connections
   kv_pair pairs[20];
   //init cache
-  cache.timestamp = 0;
+  cache[CACHE_QQQ].timestamp = 0;
+  strncpy(cache[CACHE_QQQ].symbol, "QQQ", 4);
+  strncpy(cache[CACHE_QQQ].endpoint, "quote", 20);
+  cache[CACHE_XAU].timestamp = 0;
+  strncpy(cache[CACHE_XAU].symbol, "XAU/USD", 8);
+  strncpy(cache[CACHE_XAU].endpoint, "exchange_rate", 20);
 
   if(open_connection(PORT, &ci) != 0){
     return 1;
@@ -84,11 +92,16 @@ int main(){
     }
     read(peer_socket, in_buf, 1023);
 
-    if(strncmp(in_buf, "qqq", 3) == 0){
-      quote_request(pairs);
+    if(strncmp(in_buf, "/q", 2) == 0){
+      quote_request(pairs, CACHE_QQQ);
       format_2sf(pairs[13].value);
       format_2sf(pairs[14].value);
       sprintf(in_buf, "%s %s", pairs[13].value, pairs[14].value);
+      fflush(stdout);
+    }else if(strncmp(in_buf, "/gold", 5) == 0){
+      quote_request(pairs, CACHE_XAU);
+      format_2sf(pairs[1].value);
+      sprintf(in_buf, "%s", pairs[1].value);
       fflush(stdout);
     }else{
       unsigned long time_now = time(NULL);
