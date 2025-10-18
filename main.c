@@ -29,6 +29,17 @@ void format_2sf(char* in){
     in[decimal_index+3] = 0;
 }
 
+char* long_to_ip(char* out, unsigned long IP){
+  memset(out, 0, 16); //16 bytes max for an IP string (with nullptr)
+  size_t out_idx = 0;
+  for(size_t i = 0; i < 3; i++){
+    out_idx += sprintf(&out[out_idx], "%d.", ((char*)&IP)[i]);
+  }
+  out_idx += sprintf(&out[out_idx], "%d", ((char*)&IP)[3]); //last digit has no trailing .
+  return out;
+}
+
+//handler function for quote requests, manages cache and sends new requests as needed
 void quote_request(kv_pair *pairs){
   unsigned long time_now = time(NULL);
   if(time_now <=  cache.timestamp + CACHE_TTL){
@@ -64,7 +75,8 @@ int main(){
   socklen_t size_of_peer = sizeof(ci.peer_addr);
   while(1){
     int peer_socket = accept(ci.sockfd, (struct sockaddr *)&ci.peer_addr, &size_of_peer);
-    printf("new connection from %x\n", ntohl(ci.peer_addr.sin_addr.s_addr));
+    char inbd_ip[16];
+    printf("new connection from %s\n", long_to_ip(inbd_ip, ci.peer_addr.sin_addr.s_addr));
 
     if(peer_socket == -1){
       perror("accept error");
