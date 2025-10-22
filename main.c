@@ -54,13 +54,14 @@ kv_pair *quote_request(size_t symbol){
   if(cache[symbol].timestamp != 0)
     free(cache[symbol].data);
 
-  char response_buff[2048]; //response from outbound connection
+  char response_buff[2048];
   http_response res = {0};
-  request_stock_data(response_buff, 2048,
-		     cache[symbol].endpoint, cache[symbol].symbol);
-  parse_http_response(&res, response_buff);
   kv_pair *pairs = malloc(20*sizeof(kv_pair));
-  json_parse(res.body, pairs);
+  request_stock_data(response_buff, 2048,
+		     cache[symbol].endpoint, cache[symbol].symbol); //sends https request to API, raw data placed in response buff
+  parse_http_response(&res, response_buff); //parses the http response
+  json_parse(res.body, pairs); //parses the response json
+
   cache[symbol].data = pairs;
   cache[symbol].timestamp = time_now;
   free(res.body);
@@ -79,13 +80,12 @@ int main(){
   strncpy(cache[CACHE_XAU].symbol, "XAU/USD", 8);
   strncpy(cache[CACHE_XAU].endpoint, "exchange_rate", 20);
 
-  if(open_connection(PORT, &ci) != 0){
+  if(open_connection(PORT, &ci) != 0) //open local listening socket
     return 1;
-  }
-
   printf("Started server on port %d\n", PORT);
-
   socklen_t size_of_peer = sizeof(ci.peer_addr);
+
+  //main even loop
   while(1){
     int peer_socket = accept(ci.sockfd, (struct sockaddr *)&ci.peer_addr, &size_of_peer);
     char inbd_ip[16];
@@ -97,11 +97,12 @@ int main(){
     }
     read(peer_socket, in_buf, 1023);
 
+    //TODO: consider turning this into a hashmap? lengthy if/else if/else is ugly and inefficient
     if(strncmp(in_buf, "/q", 2) == 0){
       kv_pair *pairs = quote_request(CACHE_TEM);
       format_2sf(pairs[13].value);
       format_2sf(pairs[14].value);
-      sprintf(in_buf, "%s %s", pairs[13].value, pairs[14].value);
+      sprintf(in_buf, "TEM:\n%s %s", pairs[13].value, pairs[14].value);
     }else if(strncmp(in_buf, "/gold", 5) == 0){
       kv_pair *pairs = quote_request(CACHE_XAU);
       format_2sf(pairs[1].value);
