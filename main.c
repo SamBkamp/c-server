@@ -17,7 +17,7 @@
 #define PORT 8080
 #define HK_OFFSET 28800 //8 hours in seconds
 
-#define CACHE_QQQ 0
+#define CACHE_TEM 0
 #define CACHE_XAU 1
 
 quote_cache cache[2];
@@ -43,34 +43,38 @@ char* long_to_ip(char* out, unsigned long IP){
 }
 
 //handler function for quote requests, manages cache and sends new requests as needed
-void quote_request(kv_pair *pairs, size_t symbol){
+kv_pair *quote_request(size_t symbol){
   unsigned long time_now = time(NULL);
-  if(time_now <=  cache->timestamp + CACHE_TTL){
+  if(time_now <=  cache[symbol].timestamp + CACHE_TTL){
     printf("using cached data for %s\n", cache[symbol].symbol);
-    pairs = cache->data;
-    return;
+    return cache[symbol].data;
   }
   printf("cache for %s expired, making new request\n", cache[symbol].symbol);
+
+  if(cache[symbol].timestamp != 0)
+    free(cache[symbol].data);
+
   char response_buff[2048]; //response from outbound connection
   http_response res = {0};
   request_stock_data(response_buff, 2048,
 		     cache[symbol].endpoint, cache[symbol].symbol);
   parse_http_response(&res, response_buff);
+  kv_pair *pairs = malloc(20*sizeof(kv_pair));
   json_parse(res.body, pairs);
-  cache[0].data = pairs;
-  cache[0].timestamp = time_now;
+  cache[symbol].data = pairs;
+  cache[symbol].timestamp = time_now;
   free(res.body);
+  return pairs;
 }
 
 
 int main(){
   connection_info ci;
   char in_buf[1024]; //buffer for inbound connections
-  kv_pair pairs[20];
   //init cache
-  cache[CACHE_QQQ].timestamp = 0;
-  strncpy(cache[CACHE_QQQ].symbol, "QQQ", 4);
-  strncpy(cache[CACHE_QQQ].endpoint, "quote", 20);
+  cache[CACHE_TEM].timestamp = 0;
+  strncpy(cache[CACHE_TEM].symbol, "TEM", 4);
+  strncpy(cache[CACHE_TEM].endpoint, "quote", 20);
   cache[CACHE_XAU].timestamp = 0;
   strncpy(cache[CACHE_XAU].symbol, "XAU/USD", 8);
   strncpy(cache[CACHE_XAU].endpoint, "exchange_rate", 20);
@@ -94,15 +98,14 @@ int main(){
     read(peer_socket, in_buf, 1023);
 
     if(strncmp(in_buf, "/q", 2) == 0){
-      quote_request(pairs, CACHE_QQQ);
+      kv_pair *pairs = quote_request(CACHE_TEM);
       format_2sf(pairs[13].value);
       format_2sf(pairs[14].value);
       sprintf(in_buf, "%s %s", pairs[13].value, pairs[14].value);
-      fflush(stdout);
     }else if(strncmp(in_buf, "/gold", 5) == 0){
-      quote_request(pairs, CACHE_XAU);
+      kv_pair *pairs = quote_request(CACHE_XAU);
       format_2sf(pairs[1].value);
-      sprintf(in_buf, "%s", pairs[1].value);
+      sprintf(in_buf, "GOLD: $%s", pairs[1].value);
       fflush(stdout);
     }else{
       unsigned long time_now = time(NULL);
