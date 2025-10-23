@@ -64,7 +64,7 @@ int init_socket(){
   return out_socketfd;
 }
 
-int request_stock_data(char* response_str, size_t str_size, char* endpoint, char* symbol) {
+int request_stock_data(char* response_str, size_t str_size, char* endpoint, char* arguments) {
   int bytes_recieved;
   int total_bytes_read = 0;
   char buffer[1024]; //response data buffer
@@ -94,8 +94,7 @@ int request_stock_data(char* response_str, size_t str_size, char* endpoint, char
     return 1;
   }
 
-  const char* interval = "30min";
-  snprintf(request, 512, "GET /%s?symbol=%s&interval=%s&apikey=%s HTTP/1.1\r\nHost: api.twelvedata.com\r\nConnection: close\r\n\r\n", endpoint, symbol, interval, API_SECRET);
+  snprintf(request, 512, "GET /%s?%s&apikey=%s HTTP/1.1\r\nHost: api.twelvedata.com\r\nConnection: close\r\n\r\n", endpoint, arguments, API_SECRET);
 
   SSL_write(ssl, request, strlen(request));
 
