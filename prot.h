@@ -24,8 +24,13 @@ typedef struct{
 typedef struct{
   int sockfd;
   struct sockaddr_in my_addr;
-  struct sockaddr_in peer_addr;
 }connection_info;
+
+typedef struct{
+  int sockfd;
+  struct sockaddr_in peer_addr;
+  socklen_t size_of_peer;
+}peer_connection;
 
 typedef struct{
   int response_code;

@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <time.h>
+#include <pthread.h>
 
 #include "prot.h"
 #include "conn.h"
@@ -110,51 +111,68 @@ void init_cache(){
   strncpy(cache[CACHE_MKT].endpoint, "market_state", 20);
 }
 
+int connection_worker(void *ptr){
+  char in_buf[1024]; //buffer for inbound connections
+  peer_connection *pc = (peer_connection*) ptr;
+  char inbd_ip[16];
+  printf("new connection from %s\n", long_to_ip(inbd_ip, pc->peer_addr.sin_addr.s_addr));
+
+  ssize_t r = read(pc->sockfd, in_buf, 1023);
+
+  if(r < 0){
+    perror("read() error");
+    close(pc->sockfd);
+    free(pc);
+    return 1;
+  }
+
+  //TODO: consider turning this into a hashmap? lengthy if/else if/else is ugly and inefficient
+  if(strncmp(in_buf, "/q", 2) == 0){
+    kv_pair *pairs = quote_request(CACHE_TEM);
+    sprintf(in_buf, "TEM:\n%s %s%%", pairs[13].value, pairs[15].value);
+  }else if(strncmp(in_buf, "/gold", 5) == 0){
+    kv_pair *pairs = quote_request(CACHE_XAU);
+    kv_pair *market_pairs = quote_request(CACHE_MKT);
+    //this FUCKING SUCKS
+    int compare = strcmp(market_pairs[3].value, "true");
+    sprintf(in_buf, "GOLD: $%s\nmkt: %s", pairs[1].value, compare==0?"open":"closed");
+    fflush(stdout);
+  }else{
+    unsigned long time_now = time(NULL);
+    sprintf(in_buf, "%lu", time_now+HK_OFFSET);
+  }
+  send(pc->sockfd, in_buf, strlen(in_buf), 0);
+  close(pc->sockfd);
+  free(pc);
+  return 0;
+}
+
 int main(){
   connection_info ci;
-  char in_buf[1024]; //buffer for inbound connections
 
   init_cache();
 
   if(open_connection(PORT, &ci) != 0) //open local listening socket
     return 1;
   printf("Started server on port %d\n", PORT);
-  socklen_t size_of_peer = sizeof(ci.peer_addr);
+
+  pthread_t threads;
 
   //main event loop
   while(1){
-    int peer_socket = accept(ci.sockfd, (struct sockaddr *)&ci.peer_addr, &size_of_peer);
-    char inbd_ip[16];
-    printf("new connection from %s\n", long_to_ip(inbd_ip, ci.peer_addr.sin_addr.s_addr));
+    peer_connection *pc = malloc(sizeof(peer_connection));
+    pc->size_of_peer = sizeof(pc->peer_addr);
+    pc->sockfd = accept(ci.sockfd, (struct sockaddr *)&pc->peer_addr, &pc->size_of_peer);
 
-    if(peer_socket == -1){
+    if(pc->sockfd < 0){
       perror("accept error");
       return 1;
     }
-    read(peer_socket, in_buf, 1023);
 
-    //TODO: consider turning this into a hashmap? lengthy if/else if/else is ugly and inefficient
-    if(strncmp(in_buf, "/q", 2) == 0){
-      kv_pair *pairs = quote_request(CACHE_TEM);
-      format_2sf(pairs[13].value);
-      format_2sf(pairs[14].value);
-      sprintf(in_buf, "TEM:\n%s %s%%", pairs[13].value, pairs[15].value);
-    }else if(strncmp(in_buf, "/gold", 5) == 0){
-      kv_pair *pairs = quote_request(CACHE_XAU);
-      kv_pair *market_pairs = quote_request(CACHE_MKT);
-      //this FUCKING SUCKS
-      char convert[8]; //convert true/false to open/close (ik its hacky)
-      int compare = strcmp(market_pairs[3].value, "true");
-      strcpy(convert, compare==0?"open":"closed");
-      sprintf(in_buf, "GOLD: $%s\nmkt: %s", pairs[1].value, convert);
-      fflush(stdout);
-    }else{
-      unsigned long time_now = time(NULL);
-      sprintf(in_buf, "%lu", time_now+HK_OFFSET);
-    }
-    send(peer_socket, in_buf, strlen(in_buf), 0);
-    close(peer_socket);
+    int thread = pthread_create(&threads, NULL, (void *)connection_worker, pc);
+
+    if(thread != 0)
+      perror("thread create error");
+
   }
-
-
 }
