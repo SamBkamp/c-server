@@ -43,6 +43,36 @@ char* long_to_ip(char* out, unsigned long IP){
   return out;
 }
 
+//the value of array (the pointer) doesn't change
+//returns first element of an array
+char* take_first_elment(char* array){
+  char* start = array;
+  //hack to deal with javascript arrays contiaining objects
+  if(*start == '['){ //if first character is array opener
+    uint8_t in_object = 0;
+    uint8_t in_string = 0;
+    while((*start != ','&&*start != ']')
+	  || in_object != 0 || in_string > 0){
+      switch(*start){
+      case '"':
+	in_string = (in_string+1)%2;
+	break;
+      case '{':
+	in_object++;
+	break;
+      case '}':
+	in_object--;
+	break;
+      }
+      start++;
+    }
+    *start = 0;
+    start = array+1;
+  }
+
+  return start;
+}
+
 //handler function for quote requests, manages cache and sends new requests as needed
 kv_pair *quote_request(size_t symbol){
   unsigned long time_now = time(NULL);
@@ -61,8 +91,7 @@ kv_pair *quote_request(size_t symbol){
   request_stock_data(response_buff, 2048,
 		     cache[symbol].endpoint, cache[symbol].arguments); //sends https request to API, raw data placed in response buff
   parse_http_response(&res, response_buff); //parses the http response
-  printf("%s\n", res.body);
-  json_parse(res.body, pairs); //parses the response json
+  json_parse(take_first_elment(res.body), pairs); //parses the response json
 
   cache[symbol].data = pairs;
   cache[symbol].timestamp = time_now;
@@ -88,6 +117,13 @@ void init_cache(){
 	  "code=ARCX",
 	  sizeof(cache[CACHE_MKT].arguments));
   strncpy(cache[CACHE_MKT].endpoint, "market_state", 20);
+}
+
+int main(){
+  connection_info ci;
+  char in_buf[1024]; //buffer for inbound connections
+
+  init_cache();
 
   if(open_connection(PORT, &ci) != 0) //open local listening socket
     return 1;
