@@ -70,14 +70,10 @@ kv_pair *quote_request(size_t symbol){
   return pairs;
 }
 
-
-int main(){
-  connection_info ci;
-  char in_buf[1024]; //buffer for inbound connections
-  //init cache
+void init_cache(){
   cache[CACHE_TEM].timestamp = 0;
   strncpy(cache[CACHE_TEM].arguments,
-	  "symbol=TEM&interval=30min",
+	  "symbol=TEM&interval=30min&dp=2",
 	  sizeof(cache[CACHE_TEM].arguments));
   strncpy(cache[CACHE_TEM].endpoint, "quote", 20);
 
