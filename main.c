@@ -23,16 +23,6 @@
 
 quote_cache cache[3];
 
-//formats a number from json to 2 sig. fig. (eg 604.83990 -> 604.83) (no rounding, yet)
-void format_2sf(char* in){
-  size_t decimal_index = 0;
-  while(in[decimal_index] != '.' && in[decimal_index] != 0){
-    decimal_index++;
-  }
-  if(strlen(in) >= decimal_index+3)
-    in[decimal_index+3] = 0;
-}
-
 char* long_to_ip(char* out, unsigned long IP){
   memset(out, 0, 16); //16 bytes max for an IP string (with nullptr)
   size_t out_idx = 0;
@@ -45,6 +35,7 @@ char* long_to_ip(char* out, unsigned long IP){
 
 //the value of array (the pointer) doesn't change
 //returns first element of an array
+//TODO make this like another custom strtok to give all elements of an array
 char* take_first_elment(char* array){
   char* start = array;
   //hack to deal with javascript arrays contiaining objects
@@ -130,7 +121,7 @@ int main(){
   printf("Started server on port %d\n", PORT);
   socklen_t size_of_peer = sizeof(ci.peer_addr);
 
-  //main even loop
+  //main event loop
   while(1){
     int peer_socket = accept(ci.sockfd, (struct sockaddr *)&ci.peer_addr, &size_of_peer);
     char inbd_ip[16];
@@ -151,7 +142,7 @@ int main(){
     }else if(strncmp(in_buf, "/gold", 5) == 0){
       kv_pair *pairs = quote_request(CACHE_XAU);
       kv_pair *market_pairs = quote_request(CACHE_MKT);
-      format_2sf(pairs[1].value);
+      //this FUCKING SUCKS
       char convert[8]; //convert true/false to open/close (ik its hacky)
       int compare = strcmp(market_pairs[3].value, "true");
       strcpy(convert, compare==0?"open":"closed");
