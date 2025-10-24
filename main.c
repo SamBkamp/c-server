@@ -166,13 +166,13 @@ int main(){
 
     if(pc->sockfd < 0){
       perror("accept error");
-      return 1;
+      free(pc);
     }
-
     int thread = pthread_create(&threads, NULL, (void *)connection_worker, pc);
-
-    if(thread != 0)
+    if(thread != 0){
       perror("thread create error");
-
+      free(pc);
+    }
   }
+  printf("you should not be here\n");
 }
