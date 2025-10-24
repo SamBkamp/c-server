@@ -111,12 +111,15 @@ void init_cache(){
       kv_pair *pairs = quote_request(CACHE_TEM);
       format_2sf(pairs[13].value);
       format_2sf(pairs[14].value);
-      sprintf(in_buf, "TEM:\n%s %s", pairs[13].value, pairs[14].value);
+      sprintf(in_buf, "TEM:\n%s %s%%", pairs[13].value, pairs[15].value);
     }else if(strncmp(in_buf, "/gold", 5) == 0){
       kv_pair *pairs = quote_request(CACHE_XAU);
       kv_pair *market_pairs = quote_request(CACHE_MKT);
       format_2sf(pairs[1].value);
-      sprintf(in_buf, "GOLD: $%s\nmarket:%s", pairs[1].value, market_pairs[2].key);
+      char convert[8]; //convert true/false to open/close (ik its hacky)
+      int compare = strcmp(market_pairs[3].value, "true");
+      strcpy(convert, compare==0?"open":"closed");
+      sprintf(in_buf, "GOLD: $%s\nmkt: %s", pairs[1].value, convert);
       fflush(stdout);
     }else{
       unsigned long time_now = time(NULL);
