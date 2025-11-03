@@ -23,7 +23,7 @@
 #define CACHE_MKT 2
 #define CACHE_TTWO 3
 #define CACHE_QCOM 4
-quote_cache cache[3];
+quote_cache cache[5];
 
 char* long_to_ip(char* out, unsigned long IP){
   memset(out, 0, 16); //16 bytes max for an IP string (with nullptr)
@@ -140,7 +140,8 @@ int connection_worker(void *ptr){
     fflush(stdout);
   }else if(strncmp(in_buf, "/all", 4)==0){
     kv_pair *tem_pair = quote_request(CACHE_TEM);
-    sprintf(in_buf, "TEM:\n%s   %s%%\tTEM:\n%s   %s%%", tem_pair[11].value, tem_pair[15].value, tem_pair[11].value, tem_pair[15].value);
+    kv_pair *ttwo_pair = quote_request(CACHE_TTWO);
+    sprintf(in_buf, "TEM:\n%s   %s%%\tTTWO:\n%s   %s%%", tem_pair[11].value, tem_pair[15].value, ttwo_pair[11].value, ttwo_pair[15].value);
   }else{
     unsigned long time_now = time(NULL);
     sprintf(in_buf, "%lu", time_now+HK_OFFSET);
