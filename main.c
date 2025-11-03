@@ -21,7 +21,8 @@
 #define CACHE_TEM 0
 #define CACHE_XAU 1
 #define CACHE_MKT 2
-
+#define CACHE_TTWO 3
+#define CACHE_QCOM 4
 quote_cache cache[3];
 
 char* long_to_ip(char* out, unsigned long IP){
@@ -44,17 +45,17 @@ char* take_first_elment(char* array){
     uint8_t in_object = 0;
     uint8_t in_string = 0;
     while((*start != ','&&*start != ']')
-	  || in_object != 0 || in_string > 0){
+          || in_object != 0 || in_string > 0){
       switch(*start){
       case '"':
-	in_string = (in_string+1)%2;
-	break;
+        in_string = (in_string+1)%2;
+        break;
       case '{':
-	in_object++;
-	break;
+        in_object++;
+        break;
       case '}':
-	in_object--;
-	break;
+        in_object--;
+        break;
       }
       start++;
     }
@@ -81,7 +82,7 @@ kv_pair *quote_request(size_t symbol){
   http_response res = {0};
   kv_pair *pairs = malloc(20*sizeof(kv_pair));
   request_stock_data(response_buff, 2048,
-		     cache[symbol].endpoint, cache[symbol].arguments); //sends https request to API, raw data placed in response buff
+                     cache[symbol].endpoint, cache[symbol].arguments); //sends https request to API, raw data placed in response buff
   parse_http_response(&res, response_buff); //parses the http response
   json_parse(take_first_elment(res.body), pairs); //parses the response json
 
@@ -91,33 +92,33 @@ kv_pair *quote_request(size_t symbol){
   return pairs;
 }
 
-void init_cache(){
-  cache[CACHE_TEM].timestamp = 0;
-  strncpy(cache[CACHE_TEM].arguments,
-	  "symbol=TEM&interval=30min&dp=2",
-	  sizeof(cache[CACHE_TEM].arguments));
-  strncpy(cache[CACHE_TEM].endpoint, "quote", 20);
+void populate_cache(int cache_idx, char *argument, char* endpoint){
+  cache[cache_idx].timestamp = 0;
+  strncpy(cache[cache_idx].arguments,
+          argument,
+          sizeof(cache[cache_idx].arguments));
+  strncpy(cache[cache_idx].endpoint,
+          endpoint,
+          sizeof(cache[cache_idx].endpoint));
+}
 
-  cache[CACHE_XAU].timestamp = 0;
-  strncpy(cache[CACHE_XAU].arguments,
-	  "symbol=XAU/USD",
-	  sizeof(cache[CACHE_XAU].arguments));
-  strncpy(cache[CACHE_XAU].endpoint, "exchange_rate", 20);
+void init_caches(){
+  populate_cache(CACHE_TEM, "symbol=TEM&interval=1day&dp=2&rolling_period=24", "quote");
+  populate_cache(CACHE_TTWO, "symbol=TTWO&interval=1day&dp=2&rolling_period=24", "quote");
+  populate_cache(CACHE_QCOM, "symbol=QCOM&interval=1day&dp=2&rolling_period=24", "quote");
+  populate_cache(CACHE_XAU, "symbol=XAU/USD", "exchange_rate");
+  populate_cache(CACHE_MKT, "code=ARCX", "market_state");
 
-  cache[CACHE_MKT].timestamp = 0;
-  strncpy(cache[CACHE_MKT].arguments,
-	  "code=ARCX",
-	  sizeof(cache[CACHE_MKT].arguments));
-  strncpy(cache[CACHE_MKT].endpoint, "market_state", 20);
 }
 
 int connection_worker(void *ptr){
-  char in_buf[1024]; //buffer for inbound connections
+  char in_buf[2048]; //buffer for inbound connections
   peer_connection *pc = (peer_connection*) ptr;
   char inbd_ip[16];
-  printf("new connection from %s\n", long_to_ip(inbd_ip, pc->peer_addr.sin_addr.s_addr));
+  ssize_t r;
 
-  ssize_t r = read(pc->sockfd, in_buf, 1023);
+  printf("new connection from %s\n", long_to_ip(inbd_ip, pc->peer_addr.sin_addr.s_addr));
+  r = read(pc->sockfd, in_buf, 1023);
 
   if(r < 0){
     perror("read() error");
@@ -129,7 +130,7 @@ int connection_worker(void *ptr){
   //TODO: consider turning this into a hashmap? lengthy if/else if/else is ugly and inefficient
   if(strncmp(in_buf, "/q", 2) == 0){
     kv_pair *pairs = quote_request(CACHE_TEM);
-    sprintf(in_buf, "TEM:\n%s %s%%", pairs[13].value, pairs[15].value);
+    sprintf(in_buf, "TEM:\n%s   %s%%", pairs[11].value, pairs[15].value);
   }else if(strncmp(in_buf, "/gold", 5) == 0){
     kv_pair *pairs = quote_request(CACHE_XAU);
     kv_pair *market_pairs = quote_request(CACHE_MKT);
@@ -137,6 +138,9 @@ int connection_worker(void *ptr){
     int compare = strcmp(market_pairs[3].value, "true");
     sprintf(in_buf, "GOLD: $%s\nmkt: %s", pairs[1].value, compare==0?"open":"closed");
     fflush(stdout);
+  }else if(strncmp(in_buf, "/all", 4)==0){
+    kv_pair *tem_pair = quote_request(CACHE_TEM);
+    sprintf(in_buf, "TEM:\n%s   %s%%\tTEM:\n%s   %s%%", tem_pair[11].value, tem_pair[15].value, tem_pair[11].value, tem_pair[15].value);
   }else{
     unsigned long time_now = time(NULL);
     sprintf(in_buf, "%lu", time_now+HK_OFFSET);
@@ -149,14 +153,14 @@ int connection_worker(void *ptr){
 
 int main(){
   connection_info ci;
+  pthread_t threads;
 
-  init_cache();
+  init_caches();
 
   if(open_connection(PORT, &ci) != 0) //open local listening socket
     return 1;
   printf("Started server on port %d\n", PORT);
 
-  pthread_t threads;
 
   //main event loop
   while(1){

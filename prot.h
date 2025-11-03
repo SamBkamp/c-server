@@ -16,7 +16,7 @@ typedef struct{
 
 typedef struct{
   char endpoint[20];
-  char arguments[32];
+  char arguments[64];
   unsigned long timestamp;
   kv_pair *data;
 }quote_cache;
